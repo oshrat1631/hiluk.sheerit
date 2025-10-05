@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תרגול חילוק עם שארית</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap');
+        body {
+            font-family: 'Heebo', sans-serif;
+            direction: rtl;
+        }
+
+        /* אנימציית קונפטי */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: transparent;
+            border-radius: 50%;
+            opacity: 0;
+            animation: confetti-fall 2s forwards;
+            z-index: 1000;
+        }
+
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(200px) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* אנימציה להופעת הרמז */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #hint-container {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .circle-group {
+            display: inline-flex;
+            flex-wrap: wrap;
+            margin: 5px;
+            padding: 5px;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 1rem; /* rounded-xl */
+            background-color: #e5e7eb; /* gray-200 */
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .circle {
+            width: 10px;
+            height: 10px;
+            background-color: #3b82f6; /* blue-500 */
+            border-radius: 50%;
+            margin: 2px;
+        }
+
+        .remainder-circle {
+            background-color: #f97316; /* orange-500 */
+        }
+        
+        /* Styles for printing only */
+        @media print {
+            body > *:not(#certificate-screen) {
+                display: none !important;
+            }
+            #certificate-screen {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                transform: none !important;
+                box-shadow: none !important;
+            }
+            #print-certificate-button, #export-report-button, #new-game-button {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div id="main-container" class="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full text-center transform transition-transform duration-500 ease-in-out hover:scale-105">
+
+        <!-- מסך הוראות (מוצג ראשון) -->
+        <div id="instructions-screen" class="p-4">
+            <h1 class="text-4xl sm:text-5xl font-bold text-gray-800 mb-4">ברוכים הבאים!</h1>
+            <p class="text-lg text-gray-700 mb-6">
+                יישומון זה נועד לתרגל חילוק עם שארית בצורה מהנה ויעילה.
+                <br><br>
+                <b>מהו חילוק עם שארית?</b>
+                <br>
+                חילוק עם שארית הוא פעולת חילוק שבה לא ניתן לחלק את המספר (המונה) באופן שווה במספר אחר (המחלק). המספר שנותר לאחר החלוקה נקרא "שארית".
+                <br>
+                לדוגמה: כאשר מחלקים 10 תפוחים בין 3 ילדים, כל ילד יקבל 3 תפוחים ותפוח אחד יישאר. לכן, התוצאה היא 3 והשארית היא 1.
+                <br><br>
+                <b>איך משתמשים ביישומון?</b>
+                <br>
+                ישנם שני מצבי משחק: "רגוע" ו"אתגרי", ובכל אחד מהם שתי רמות קושי:
+                <br>
+                <b><span class="text-blue-500">מצב רגוע</span></b>: ללא טיימר וללא חיים. תוכלו לתרגל בנחת.
+                <br>
+                <b><span class="text-red-500">מצב אתגרי</span></b>: עם טיימר ו-10 חיים. כל טעות מורידה חיים ונגמר הזמן.
+                <br><br>
+                <b>לכל מצב יש שתי אפשרויות:</b>
+                <br>
+                1.  <b>הזנה ידנית</b>: תקבלו תרגיל ותצטרכו להקליד את המנה והשארית.
+                <br>
+                2.  <b>בחירה מרובה</b>: תקבלו תרגיל ותצטרכו לבחור את התשובה הנכונה מבין ארבע אפשרויות.
+            </p>
+            <button id="start-button" class="bg-green-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-green-600 focus:outline-none focus:ring-4 focus:ring-green-300">בואו נתחיל!</button>
+        </div>
+        
+        <!-- מסך בחירת מצב משחק (מוסתר בהתחלה) -->
+        <div id="mode-selection-screen" class="hidden">
+            <h1 class="text-4xl sm:text-5xl font-bold text-gray-800 mb-6">בחר/י מצב משחק</h1>
+            <div id="game-modes" class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4 sm:space-x-reverse mb-6">
+                <button id="relaxed-mode-button" class="w-full sm:w-1/2 bg-blue-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300">מצב רגוע</button>
+                <button id="challenging-mode-button" class="w-full sm:w-1/2 bg-red-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-red-600 focus:outline-none focus:ring-4 focus:ring-red-300">מצב אתגרי</button>
+            </div>
+        </div>
+
+        <!-- מסך בחירת סוג שאלה (מוסתר בהתחלה) -->
+        <div id="question-type-screen" class="hidden">
+            <h1 class="text-4xl sm:text-5xl font-bold text-gray-800 mb-6">בחר/י סוג שאלה</h1>
+            <div id="question-types" class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4 sm:space-x-reverse mb-6">
+                <button id="manual-input-button" class="w-full sm:w-1/2 bg-yellow-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-yellow-600 focus:outline-none focus:ring-4 focus:ring-yellow-300">הזנה ידנית</button>
+                <button id="multiple-choice-button" class="w-full sm:w-1/2 bg-purple-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-purple-600 focus:outline-none focus:ring-4 focus:ring-purple-300">בחירה מרובה</button>
+            </div>
+            <button id="back-to-mode-selection" class="mt-4 bg-gray-400 text-white text-md font-bold py-2 px-4 rounded-lg shadow-md transition-all transform hover:scale-105 hover:bg-gray-500">חזור לבחירת מצב משחק</button>
+        </div>
+
+        <!-- מסך הגדרות אתגרי (מוסתר בהתחלה) -->
+        <div id="challenging-settings-screen" class="hidden flex flex-col items-center mb-6">
+            <label for="timer-duration" class="text-gray-700 text-lg font-semibold mb-2">בחר/י זמן לשאלה:</label>
+            <select id="timer-duration" class="p-2 rounded-lg border-2 border-gray-300">
+                <option value="30">30 שניות</option>
+                <option value="60">60 שניות</option>
+                <option value="90">90 שניות</option>
+                <option value="120">120 שניות</option>
+            </select>
+            <button id="start-challenging-game-button" class="mt-4 bg-green-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-green-600 focus:outline-none focus:ring-4 focus:ring-green-300">התחל/י אתגר</button>
+        </div>
+        
+        <!-- מסך המשחק הראשי (מוסתר בהתחלה) -->
+        <div id="game-screen" class="hidden">
+            <h1 class="text-4xl sm:text-5xl font-bold text-gray-800 mb-6">תרגול חילוק</h1>
+            
+            <!-- מידע על המשחק - טיימר וחיים -->
+            <div id="game-info" class="hidden flex justify-between items-center mb-4">
+                <div class="text-xl font-bold text-gray-700">זמן: <span id="timer-display">--</span></div>
+                <div class="text-xl font-bold text-red-600">חיים: <span id="lives-display">❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️</span></div>
+            </div>
+
+            <!-- תיקון כיוון התרגיל כך שיוצג משמאל לימין -->
+            <div id="problem-container" dir="ltr" class="bg-blue-100 text-blue-800 text-5xl font-bold py-8 px-6 rounded-2xl mb-8 border-4 border-blue-400">
+                <span id="dividend">--</span> &#xF7; <span id="divisor">--</span>
+            </div>
+
+            <div id="manual-input-section" class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4 sm:space-x-reverse mb-8">
+                <div class="w-full sm:w-1/2">
+                    <label for="quotient-input" class="block text-gray-700 text-lg font-semibold mb-2">מנה</label>
+                    <input type="number" id="quotient-input" class="w-full p-4 text-center text-3xl rounded-2xl border-2 border-gray-300 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors" placeholder="מנה" />
+                </div>
+                <div class="w-full sm:w-1/2">
+                    <label for="remainder-input" class="block text-gray-700 text-lg font-semibold mb-2">שארית</label>
+                    <input type="number" id="remainder-input" class="w-full p-4 text-center text-3xl rounded-2xl border-2 border-gray-300 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-colors" placeholder="שארית" />
+                </div>
+            </div>
+
+            <div id="multiple-choice-section" class="hidden flex flex-wrap justify-center gap-4 mb-8">
+                <!-- אפשרויות התשובה יוצגו כאן -->
+            </div>
+            
+            <div id="feedback-message" class="text-2xl font-bold mb-6 min-h-[3rem]"></div>
+
+            <!-- מיכל הרמז -->
+            <div id="hint-container" class="hidden text-gray-700 text-lg mb-6"></div>
+
+            <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4 sm:space-x-reverse">
+                <button id="check-button" class="w-full sm:w-1/3 bg-green-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-green-600 focus:outline-none focus:ring-4 focus:ring-green-300">בְּדֹק</button>
+                <button id="new-problem-button" class="w-full sm:w-1/3 bg-purple-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-purple-600 focus:outline-none focus:ring-4 focus:ring-purple-300">שְׁאֵלָה חֲדָשָׁה</button>
+                <button id="hint-button" class="w-full sm:w-1/3 bg-yellow-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-yellow-600 focus:outline-none focus:ring-4 focus:ring-yellow-300">רֶמֶז</button>
+            </div>
+
+            <button id="back-to-menu-button" class="mt-4 bg-gray-400 text-white text-md font-bold py-2 px-4 rounded-lg shadow-md transition-all transform hover:scale-105 hover:bg-gray-500">חזור לבחירת מצב משחק</button>
+        </div>
+        
+        <!-- מסך תעודת ההערכה (מוסתר בהתחלה) -->
+        <div id="certificate-screen" class="hidden p-4">
+            <h1 class="text-4xl sm:text-5xl font-bold text-gray-800 mb-6">תעודת הערכה</h1>
+            <div id="certificate-content" class="bg-gray-100 p-8 rounded-2xl shadow-inner text-gray-700 text-lg">
+                <p class="mb-4">תעודת הערכה זו מוענקת ל</p>
+                <input type="text" id="child-name-input" placeholder="הכנס/י שם" class="w-full text-center text-2xl font-bold p-2 mb-6 border-b-2 border-gray-400 bg-transparent focus:outline-none focus:border-blue-500">
+                <p class="mb-6">על הישגיך בתחום החילוק עם שארית.</p>
+                <h2 class="text-2xl font-bold mb-4">הצלחת בתרגילים:</h2>
+                <div id="solved-problems-list" class="text-left font-mono"></div>
+                <p class="mt-6 text-xl font-bold">בהצלחה בהמשך!</p>
+            </div>
+            <div class="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4 sm:space-x-reverse mt-6">
+                <button id="print-certificate-button" class="w-full sm:w-auto bg-blue-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300">הדפסת תעודה</button>
+                <button id="export-report-button" class="w-full sm:w-auto bg-green-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-green-600 focus:outline-none focus:ring-4 focus:ring-green-300">דו"ח להורים</button>
+                <button id="new-game-button" class="w-full sm:w-auto bg-purple-500 text-white text-xl font-bold py-4 px-6 rounded-2xl shadow-lg transition-all transform hover:scale-105 hover:bg-purple-600 focus:outline-none focus:ring-4 focus:ring-purple-300">משחק חדש</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM element references
+        const mainContainer = document.getElementById('main-container');
+        const instructionsScreen = document.getElementById('instructions-screen');
+        const startButton = document.getElementById('start-button');
+        const modeSelectionScreen = document.getElementById('mode-selection-screen');
+        const relaxedModeButton = document.getElementById('relaxed-mode-button');
+        const challengingModeButton = document.getElementById('challenging-mode-button');
+        const questionTypeScreen = document.getElementById('question-type-screen');
+        const manualInputButton = document.getElementById('manual-input-button');
+        const multipleChoiceButton = document.getElementById('multiple-choice-button');
+        const challengingSettingsScreen = document.getElementById('challenging-settings-screen');
+        const timerDurationSelect = document.getElementById('timer-duration');
+        const startChallengingGameButton = document.getElementById('start-challenging-game-button');
+        const gameScreen = document.getElementById('game-screen');
+        const gameInfo = document.getElementById('game-info');
+        const timerDisplay = document.getElementById('timer-display');
+        const livesDisplay = document.getElementById('lives-display');
+        const problemContainer = document.getElementById('problem-container');
+        const dividendEl = document.getElementById('dividend');
+        const divisorEl = document.getElementById('divisor');
+        const manualInputSection = document.getElementById('manual-input-section');
+        const multipleChoiceSection = document.getElementById('multiple-choice-section');
+        const quotientInput = document.getElementById('quotient-input');
+        const remainderInput = document.getElementById('remainder-input');
+        const checkButton = document.getElementById('check-button');
+        const newProblemButton = document.getElementById('new-problem-button');
+        const hintButton = document.getElementById('hint-button');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const hintContainer = document.getElementById('hint-container');
+        const backToModeSelectionButton = document.getElementById('back-to-mode-selection');
+        const backToMenuButton = document.getElementById('back-to-menu-button');
+        const certificateScreen = document.getElementById('certificate-screen');
+        const childNameInput = document.getElementById('child-name-input');
+        const solvedProblemsList = document.getElementById('solved-problems-list');
+        const printCertificateButton = document.getElementById('print-certificate-button');
+        const exportReportButton = document.getElementById('export-report-button');
+        const newGameButton = document.getElementById('new-game-button');
+
+        // Global variables for game state
+        let currentDividend, currentDivisor;
+        let isChallengingMode = false;
+        let isMultipleChoice = false;
+        let lives = 10;
+        let timeLeft = 0;
+        let timerInterval = null;
+        let totalProblemsInGame = 0;
+        let problemsAttempted = [];
+        let solvedProblems = [];
+        let problemIndex = 0;
+        let gameProblems = [];
+
+        // Screen navigation utility
+        function showScreen(screenId) {
+            instructionsScreen.classList.add('hidden');
+            modeSelectionScreen.classList.add('hidden');
+            questionTypeScreen.classList.add('hidden');
+            challengingSettingsScreen.classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            certificateScreen.classList.add('hidden');
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        // Confetti animation
+        function showConfetti() {
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.top = Math.random() * -20 + 'vh';
+                confetti.style.backgroundColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+                document.body.appendChild(confetti);
+
+                setTimeout(() => confetti.remove(), 2000);
+            }
+        }
+
+        // Timer functions
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerDisplay.textContent = timeLeft;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeOut();
+                }
+            }, 1000);
+        }
+        
+        function handleTimeOut() {
+            lives--;
+            updateLivesDisplay();
+            feedbackMessage.textContent = 'נגמר הזמן! ⏳ נותרו לכם ' + lives + ' חיים.';
+            feedbackMessage.classList.add('text-red-600');
+            recordProblem(false);
+            if (lives <= 0) {
+                endGame();
+            } else {
+                setTimeout(generateNewProblem, 2000);
+            }
+        }
+        
+        function endGame() {
+            clearInterval(timerInterval);
+            checkButton.disabled = true;
+            newProblemButton.disabled = true;
+            feedbackMessage.innerHTML = 'המשחק נגמר! נגמרו לכם החיים! 😢';
+            feedbackMessage.classList.add('text-red-600');
+            setTimeout(endGameAndShowCertificate, 3000);
+        }
+        
+        function updateLivesDisplay() {
+            livesDisplay.textContent = '❤️'.repeat(lives);
+        }
+        
+        // Problem generation and game logic
+        function generateUniqueProblem() {
+            let problem;
+            let isUnique = false;
+            while (!isUnique) {
+                const dividend = Math.floor(Math.random() * 91) + 10;
+                const divisor = Math.floor(Math.random() * 8) + 2;
+                problem = { dividend, divisor };
+                isUnique = !gameProblems.some(p => p.dividend === problem.dividend && p.divisor === problem.divisor);
+            }
+            return problem;
+        }
+
+        function startGame(totalProblems) {
+            totalProblemsInGame = totalProblems;
+            problemsAttempted = [];
+            solvedProblems = [];
+            problemsSolved = [];
+            problemIndex = 0;
+            lives = 10;
+            gameProblems = [];
+            for (let i = 0; i < totalProblemsInGame; i++) {
+                gameProblems.push(generateUniqueProblem());
+            }
+            showGameScreen();
+        }
+
+        function generateNewProblem() {
+            if (problemIndex >= totalProblemsInGame) {
+                endGameAndShowCertificate();
+                return;
+            }
+
+            const problem = gameProblems[problemIndex];
+            currentDividend = problem.dividend;
+            currentDivisor = problem.divisor;
+            
+            dividendEl.textContent = currentDividend;
+            divisorEl.textContent = currentDivisor;
+            
+            quotientInput.value = '';
+            remainderInput.value = '';
+            feedbackMessage.textContent = '';
+            hintContainer.innerHTML = '';
+            hintContainer.classList.add('hidden');
+            
+            checkButton.disabled = false;
+            checkButton.style.opacity = '1';
+            
+            if (isChallengingMode) {
+                clearInterval(timerInterval);
+                timeLeft = parseInt(timerDurationSelect.value);
+                startTimer();
+            }
+
+            if (isMultipleChoice) {
+                createMultipleChoiceOptions();
+            }
+        }
+
+        function recordProblem(isCorrect, userQ, userR) {
+            const correctQ = Math.floor(currentDividend / currentDivisor);
+            const correctR = currentDividend % currentDivisor;
+            
+            problemsAttempted.push({
+                dividend: currentDividend,
+                divisor: currentDivisor,
+                userQuotient: userQ,
+                userRemainder: userR,
+                correctQuotient: correctQ,
+                correctRemainder: correctR,
+                correct: isCorrect
+            });
+            if (isCorrect) {
+                solvedProblems.push({
+                    dividend: currentDividend,
+                    divisor: currentDivisor,
+                });
+            }
+            problemIndex++;
+        }
+
+        function createMultipleChoiceOptions() {
+            const correctQuotient = Math.floor(currentDividend / currentDivisor);
+            const correctRemainder = currentDividend % currentDivisor;
+            const correctAnswer = { q: correctQuotient, r: correctRemainder };
+
+            const answers = [correctAnswer];
+            while (answers.length < 4) {
+                let falseQuotient = Math.floor(Math.random() * 10);
+                let falseRemainder = Math.floor(Math.random() * currentDivisor);
+                const falseAnswer = { q: falseQuotient, r: falseRemainder };
+                
+                if (!answers.some(a => a.q === falseAnswer.q && a.r === falseAnswer.r)) {
+                    answers.push(falseAnswer);
+                }
+            }
+            answers.sort(() => Math.random() - 0.5);
+
+            multipleChoiceSection.innerHTML = '';
+            answers.forEach(answer => {
+                const button = document.createElement('button');
+                button.textContent = 'מנה: ' + answer.q + ', שארית: ' + answer.r;
+                button.classList.add('w-full', 'sm:w-1/2', 'bg-gray-200', 'text-gray-800', 'text-lg', 'font-bold', 'py-4', 'px-6', 'rounded-2xl', 'shadow-lg', 'transition-all', 'transform', 'hover:scale-105', 'hover:bg-gray-300', 'focus:outline-none', 'focus:ring-4', 'focus:ring-blue-300');
+                button.onclick = () => checkMultipleChoice(answer.q, answer.r);
+                multipleChoiceSection.appendChild(button);
+            });
+        }
+        
+        function checkMultipleChoice(q, r) {
+            const correctQuotient = Math.floor(currentDividend / currentDivisor);
+            const correctRemainder = currentDividend % currentDivisor;
+            
+            if (q === correctQuotient && r === correctRemainder) {
+                feedbackMessage.innerHTML = 'מצויין! אתם אלופים! 🎉';
+                feedbackMessage.classList.remove('text-yellow-600', 'text-red-600');
+                feedbackMessage.classList.add('text-green-600');
+                showConfetti();
+                if (isChallengingMode) clearInterval(timerInterval);
+                recordProblem(true, q, r);
+                setTimeout(generateNewProblem, 1000);
+            } else {
+                feedbackMessage.innerHTML = 'הממ... התשובה אינה נכונה. בואו נחשוב שוב:<br> ' +
+                                            currentDividend + ' = ' + correctQuotient + ' × ' + currentDivisor + ' + ' + correctRemainder;
+                feedbackMessage.classList.remove('text-yellow-600', 'text-green-600');
+                feedbackMessage.classList.add('text-red-600');
+                recordProblem(false, q, r);
+                if (isChallengingMode) {
+                    lives--;
+                    updateLivesDisplay();
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+                setTimeout(generateNewProblem, 2000);
+            }
+        }
+
+        function showHint() {
+            hintContainer.innerHTML = '';
+            hintContainer.classList.remove('hidden');
+
+            const correctQuotient = Math.floor(currentDividend / currentDivisor);
+            const correctRemainder = currentDividend % currentDivisor;
+
+            const explanation = document.createElement('p');
+            explanation.textContent = 'בואו ננסה לחלק את ' + currentDividend + ' העיגולים לקבוצות של ' + currentDivisor + '.';
+            explanation.classList.add('mb-4');
+            hintContainer.appendChild(explanation);
+
+            const quotientGroups = document.createElement('div');
+            quotientGroups.classList.add('flex', 'flex-wrap', 'justify-center', 'mb-4');
+            for (let i = 0; i < correctQuotient; i++) {
+                const group = document.createElement('div');
+                group.classList.add('circle-group');
+                for (let j = 0; j < currentDivisor; j++) {
+                    const circle = document.createElement('div');
+                    circle.classList.add('circle');
+                    group.appendChild(circle);
+                }
+                quotientGroups.appendChild(group);
+            }
+            hintContainer.appendChild(quotientGroups);
+
+            if (correctRemainder > 0) {
+                const remainderExplanation = document.createElement('p');
+                remainderExplanation.textContent = 'נשארו ' + correctRemainder + ' עיגולים. זו השארית!';
+                remainderExplanation.classList.add('mb-2');
+                hintContainer.appendChild(remainderExplanation);
+
+                const remainderCircles = document.createElement('div');
+                remainderCircles.classList.add('flex', 'flex-wrap', 'justify-center');
+                for (let i = 0; i < correctRemainder; i++) {
+                    const circle = document.createElement('div');
+                    circle.classList.add('circle', 'remainder-circle');
+                    remainderCircles.appendChild(circle);
+                }
+                hintContainer.appendChild(remainderCircles);
+            }
+        }
+
+        function checkAnswer() {
+            const userQuotient = parseInt(quotientInput.value);
+            const userRemainder = parseInt(remainderInput.value);
+
+            const correctQuotient = Math.floor(currentDividend / currentDivisor);
+            const correctRemainder = currentDividend % currentDivisor;
+
+            if (isNaN(userQuotient) || isNaN(userRemainder)) {
+                feedbackMessage.textContent = 'יש להזין מספרים בשני השדות.';
+                feedbackMessage.classList.remove('text-green-600', 'text-red-600');
+                feedbackMessage.classList.add('text-yellow-600');
+                return;
+            }
+
+            if (userQuotient === correctQuotient && userRemainder === correctRemainder) {
+                feedbackMessage.innerHTML = 'מצויין! אתם אלופים! 🎉';
+                feedbackMessage.classList.remove('text-yellow-600', 'text-red-600');
+                feedbackMessage.classList.add('text-green-600');
+                showConfetti();
+                checkButton.disabled = true;
+                checkButton.style.opacity = '0.5';
+                if (isChallengingMode) clearInterval(timerInterval);
+                recordProblem(true, userQuotient, userRemainder);
+                setTimeout(generateNewProblem, 1000);
+            } else {
+                feedbackMessage.innerHTML = 'הממ... התשובה אינה נכונה. בואו נחשוב שוב:<br> ' +
+                                            currentDividend + ' = ' + correctQuotient + ' × ' + currentDivisor + ' + ' + correctRemainder;
+                feedbackMessage.classList.remove('text-yellow-600', 'text-green-600');
+                feedbackMessage.classList.add('text-red-600');
+                recordProblem(false, userQuotient, userRemainder);
+                if (isChallengingMode) {
+                    lives--;
+                    updateLivesDisplay();
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+                setTimeout(generateNewProblem, 2000);
+            }
+        }
+
+        // Screen logic
+        function showGameScreen() {
+            showScreen('game-screen');
+            if (isChallengingMode) {
+                gameInfo.classList.remove('hidden');
+                livesDisplay.textContent = '❤️'.repeat(lives);
+            } else {
+                gameInfo.classList.add('hidden');
+            }
+            if (isMultipleChoice) {
+                manualInputSection.classList.add('hidden');
+                multipleChoiceSection.classList.remove('hidden');
+                checkButton.classList.add('hidden');
+            } else {
+                manualInputSection.classList.remove('hidden');
+                multipleChoiceSection.classList.add('hidden');
+                checkButton.classList.remove('hidden');
+            }
+            generateNewProblem();
+        }
+
+        function endGameAndShowCertificate() {
+            showScreen('certificate-screen');
+            solvedProblemsList.innerHTML = '';
+            if (solvedProblems.length > 0) {
+                solvedProblems.forEach(p => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${p.dividend} ÷ ${p.divisor} = ${Math.floor(p.dividend / p.divisor)} עם שארית ${p.dividend % p.divisor}`;
+                    listItem.classList.add('text-lg', 'font-semibold', 'my-2', 'text-center', 'rtl');
+                    listItem.style.direction = 'ltr';
+                    solvedProblemsList.appendChild(listItem);
+                });
+            } else {
+                solvedProblemsList.textContent = 'לא נפתרו תרגילים בהצלחה במשחק זה.';
+                solvedProblemsList.classList.add('text-center', 'font-bold', 'text-red-500');
+            }
+        }
+
+        // Certificate and report functions
+        function printCertificate() {
+            const certContent = `
+                <!DOCTYPE html>
+                <html lang="he" dir="rtl">
+                <head>
+                    <title>תעודת הערכה</title>
+                    <style>
+                        body { font-family: 'Heebo', sans-serif; direction: rtl; text-align: center; margin: 0; padding: 0; }
+                        .certificate-container { border: 5px solid gold; padding: 2rem; margin: 2rem; border-radius: 1rem; position: relative; }
+                        h1 { font-size: 3rem; margin-bottom: 1rem; color: #4a5568; }
+                        p { font-size: 1.25rem; }
+                        .trophy { font-size: 5rem; color: gold; margin-bottom: 1rem; }
+                        .name-input { font-size: 1.5rem; font-weight: bold; border: none; border-bottom: 2px solid #ccc; background: transparent; text-align: center; }
+                        .problems-list { list-style-type: none; padding: 0; text-align: center; font-family: monospace; }
+                        .problem-item { margin: 0.5rem 0; font-size: 1.1rem; }
+                        @media print {
+                            .no-print { display: none; }
+                            body { background-color: white; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="certificate-container">
+                        <div class="trophy">&#127942;</div>
+                        <h1>תעודת הערכה</h1>
+                        <p>תעודת הערכה זו מוענקת ל</p>
+                        <p class="name-text">${childNameInput.value || '____________________'}</p>
+                        <p class="mb-6">על הישגיך בתחום החילוק עם שארית.</p>
+                        <h2>הצלחת בתרגילים:</h2>
+                        <ul class="problems-list">
+                            ${solvedProblems.map(p => `<li class="problem-item" dir="ltr">${p.dividend} ÷ ${p.divisor} = ${Math.floor(p.dividend / p.divisor)} עם שארית ${p.dividend % p.divisor}</li>`).join('')}
+                        </ul>
+                        <p class="mt-6">בהצלחה בהמשך!</p>
+                    </div>
+                </body>
+                </html>
+            `;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(certContent);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        }
+
+        function generateAndExportReport() {
+            const solved = problemsAttempted.filter(p => p.correct);
+            const failed = problemsAttempted.filter(p => !p.correct);
+            const totalProblems = problemsAttempted.length;
+            const successRate = totalProblems > 0 ? (solved.length / totalProblems * 100).toFixed(0) : 0;
+            const name = childNameInput.value || "התלמיד/ה";
+
+            let solvedList = solved.map(p => {
+                const correctQ = Math.floor(p.dividend / p.divisor);
+                const correctR = p.dividend % p.divisor;
+                return `<li dir="ltr" style="text-align: right;">${p.dividend} ÷ ${p.divisor} = ${correctQ} עם שארית ${correctR}</li>`;
+            }).join('');
+
+            let failedList = failed.map(p => {
+                const correctQ = Math.floor(p.dividend / p.divisor);
+                const correctR = p.dividend % p.divisor;
+                return `<li dir="ltr" style="text-align: right;">${p.dividend} ÷ ${p.divisor} (תשובה נכונה: מנה ${correctQ}, שארית ${correctR})</li>`;
+            }).join('');
+            
+            let reportContent = `
+                <!DOCTYPE html>
+                <html lang="he" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>דו"ח ביצועים - ${name}</title>
+                    <style>
+                        body { font-family: 'Heebo', sans-serif; direction: rtl; line-height: 1.6; color: #333; max-width: 800px; margin: auto; padding: 20px; }
+                        h1, h2 { text-align: center; color: #1a202c; }
+                        h2 { margin-top: 30px; padding-bottom: 5px; border-bottom: 2px solid #ccc; }
+                        ul { list-style-type: none; padding: 0; }
+                        li { margin-bottom: 5px; font-size: 1.1rem; }
+                        strong { color: #4a5568; }
+                        .summary p, .recommendations p { font-size: 1.1rem; }
+                    </style>
+                </head>
+                <body>
+                    <h1>דו"ח ביצועים - חילוק עם שארית</h1>
+                    <div class="summary">
+                        <p>דוח זה נועד לעקוב אחר התקדמותו של <strong>${name}</strong> ביישומון החילוק.</p>
+                        <p><strong>מצב משחק:</strong> ${isChallengingMode ? 'אתגרי' : 'רגוע'}</p>
+                        <p><strong>סוג תרגול:</strong> ${isMultipleChoice ? 'בחירה מרובה' : 'הזנה ידנית'}</p>
+                        <p><strong>מספר תרגילים:</strong> ${totalProblems}</p>
+                        <p><strong>אחוז הצלחה:</strong> ${successRate}%</p>
+                    </div>
+
+                    <h2>תרגילים שהושלמו בהצלחה (${solved.length} מתוך ${totalProblems})</h2>
+                    <ul>
+                        ${solvedList}
+                    </ul>
+
+                    <h2>תרגילים שדרשו תרגול נוסף (${failed.length} מתוך ${totalProblems})</h2>
+                    <ul>
+                        ${failedList}
+                    </ul>
+
+                    <h2>המלצות להמשך תרגול</h2>
+                    <p>מומלץ לחזק את התרגול בנושאים הבאים:</p>
+                    <ul>
+                        <li><strong>בדיקת התוצאה:</strong> ניתן לוודא תשובה באמצעות כפל וחיבור (מנה × מחלק + שארית = מונה).</li>
+                        <li><strong>הבנת החילוק כחלוקה לקבוצות שוות:</strong> שימוש בעזרים חזותיים (כמו ברמז) כדי להמחיש את החלוקה.</li>
+                        <li><strong>תרגול לוח הכפל:</strong> מיומנות זו חיונית לפתרון מהיר ומדויק של תרגילי חילוק.</li>
+                    </ul>
+                </body>
+                </html>
+            `;
+            
+            const newWindow = window.open();
+            newWindow.document.write(reportContent);
+            newWindow.document.close();
+        }
+
+        // Event listeners
+        startButton.addEventListener('click', () => showScreen('mode-selection-screen'));
+        
+        relaxedModeButton.addEventListener('click', () => { isChallengingMode = false; showScreen('question-type-screen'); });
+        challengingModeButton.addEventListener('click', () => { isChallengingMode = true; showScreen('question-type-screen'); });
+
+        manualInputButton.addEventListener('click', () => { 
+            isMultipleChoice = false; 
+            if (isChallengingMode) {
+                showScreen('challenging-settings-screen');
+            } else {
+                startGame(15);
+            }
+        });
+
+        multipleChoiceButton.addEventListener('click', () => { 
+            isMultipleChoice = true; 
+            if (isChallengingMode) {
+                showScreen('challenging-settings-screen');
+            } else {
+                startGame(15);
+            }
+        });
+        
+        startChallengingGameButton.addEventListener('click', () => startGame(10));
+        
+        checkButton.addEventListener('click', checkAnswer);
+        newProblemButton.addEventListener('click', generateNewProblem);
+        hintButton.addEventListener('click', showHint);
+        
+        backToModeSelectionButton.addEventListener('click', () => showScreen('mode-selection-screen'));
+        backToMenuButton.addEventListener('click', () => {
+            if (timerInterval) clearInterval(timerInterval);
+            lives = 10;
+            showScreen('mode-selection-screen');
+        });
+
+        printCertificateButton.addEventListener('click', printCertificate);
+        exportReportButton.addEventListener('click', generateAndExportReport);
+        newGameButton.addEventListener('click', () => {
+            if (timerInterval) clearInterval(timerInterval);
+            showScreen('mode-selection-screen');
+        });
+    </script>
+</body>
+</html>
